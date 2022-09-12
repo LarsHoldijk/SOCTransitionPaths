@@ -1,13 +1,7 @@
-import torch
-
-from openmm import app
 import openmm as mm
 import openmm.unit as unit
+from openmm import app
 from openmmtools.integrators import VVVRIntegrator
-from sys import stdout
-import pprint
-import numpy as np
-from tqdm import tqdm
 
 from potentials.MoleculePotential import MoleculePotential
 

@@ -1,6 +1,3 @@
-import os
-
-import numpy as np
 import torch
 
 from Dynamics.MoleculeBase import MoleculeBaseDynamics
@@ -29,7 +26,6 @@ class PolyDynamics(MoleculeBaseDynamics):
             potentials.append(pot)
 
         return potentials
-
 
     def phi(self, x):
         end_ = self.ending_positions.view(self.ending_positions.shape[0], -1)

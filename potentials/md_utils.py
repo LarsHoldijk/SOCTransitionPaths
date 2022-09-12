@@ -1,5 +1,6 @@
+import numpy as np
 import openmm.unit as unit
-import numpy as np 
+
 
 class ForceReporter(object):
     def __init__(self, reportInterval):

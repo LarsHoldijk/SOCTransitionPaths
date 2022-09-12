@@ -1,14 +1,14 @@
-from openmm import app
 import openmm as mm
 import openmm.unit as unit
+from openmm import app
 from openmmtools.integrators import VVVRIntegrator
 
 from potentials.MoleculePotential import MoleculePotential
 
 
 class ChignolinPotentialMD(MoleculePotential):
-    def __init__(self, start_file, index, reset_steps=100, save_file=None):
-        super().__init__(start_file, index, reset_steps, save_file)
+    def __init__(self, start_file, index, save_file=None):
+        super().__init__(start_file, index, save_file)
 
 
     def setup(self):

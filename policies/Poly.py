@@ -48,7 +48,8 @@ class NNPolicy(nn.Module):
         out = self.linear_relu_stack(x_)
         if not self.force:
             out = out * 50
-            force = -torch.autograd.grad(outputs=out, inputs=x, grad_outputs=torch.ones_like(out), create_graph=True, retain_graph=True)[0]
+            force = -torch.autograd.grad(outputs=out, inputs=x, grad_outputs=torch.ones_like(out),
+                                         create_graph=True, retain_graph=True)[0]
             return out, force
         else:
             out = out.view(-1, self.dims)
