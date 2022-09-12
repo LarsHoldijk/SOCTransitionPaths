@@ -2,26 +2,25 @@ import torch
 from tqdm import tqdm
 
 
-def PICE(env, policy, n_rollouts, n_samples, n_steps, dt, std, dim, R,
-               logger, force, plotters=None, verbose=True, file=None, device='cpu', lr=0.00001, start_step=0):
-
+def PICE(env, policy, n_rollouts, n_samples, n_steps, dt, std, dim, R, logger, force, plotters=None, verbose=True,
+         file=None, device='cpu', lr=0.00001, start_step=0):
     p_dim = dim
-    u_dim = dim // 2 # Doesn't include the positions
+    u_dim = dim // 2  # Doesn't include the positions
     T = dt * n_steps
 
     std_ = torch.eye(u_dim).to(device) * (std)
     lambda_ = R @ ((std_ ** 2) / dt)
-    lambda_ = lambda_[0, 0] # Every element should be the same anyway
+    lambda_ = lambda_[0, 0]  # Every element should be the same anyway
 
     for r in range(start_step, n_rollouts):
         if verbose: print(f"Rollout: {r}")
 
         # Setup bookkeeping
-        paths = torch.zeros((n_samples, n_steps+1, p_dim), device=device) 
-        us = torch.zeros((n_samples, n_steps, u_dim), device=device) 
-        costs_q = torch.zeros((n_samples, n_steps), device=device) 
-        costs_action = torch.zeros((n_samples, n_steps), device=device) 
-        costs_noise = torch.zeros((n_samples, n_steps), device=device) 
+        paths = torch.zeros((n_samples, n_steps + 1, p_dim), device=device)
+        us = torch.zeros((n_samples, n_steps, u_dim), device=device)
+        costs_q = torch.zeros((n_samples, n_steps), device=device)
+        costs_action = torch.zeros((n_samples, n_steps), device=device)
+        costs_noise = torch.zeros((n_samples, n_steps), device=device)
 
         # Setup bookkeeping for path costs
         path_cost = torch.zeros((n_samples), device=device)
@@ -53,17 +52,20 @@ def PICE(env, policy, n_rollouts, n_samples, n_steps, dt, std, dim, R,
             t = torch.tensor(s * dt)
             # Determine the action
             if force:
-                update_u = policy (x, t)
+                update_u = policy(x, t)
             else:
                 _, update_u = policy(x, t)
 
-            # We need to get the gradient wrt the parameters for each input individually as we need to scale them later based on the score for each trajectory
+            # We need to get the gradient wrt the parameters for each input individually as we need to scale them later
+            # based on the score for each trajectory
             for n in range(0, n_samples):
                 tmp_ = -1 * R @ (noise[n, s, :]) * dt
-                if n == (n_samples-1):
-                    tmp = torch.autograd.grad(update_u[n], policy.parameters(), retain_graph=False, allow_unused=True, grad_outputs=tmp_)
+                if n == (n_samples - 1):
+                    tmp = torch.autograd.grad(update_u[n], policy.parameters(), retain_graph=False, allow_unused=True,
+                                              grad_outputs=tmp_)
                 else:
-                    tmp = torch.autograd.grad(update_u[n], policy.parameters(), retain_graph=True, allow_unused=True, grad_outputs=tmp_)# * dt
+                    tmp = torch.autograd.grad(update_u[n], policy.parameters(), retain_graph=True, allow_unused=True,
+                                              grad_outputs=tmp_)  # * dt
                 tmp_new = []
                 for element in tmp:
                     tmp_new.append(element)
@@ -125,18 +127,15 @@ def PICE(env, policy, n_rollouts, n_samples, n_steps, dt, std, dim, R,
                 scaled_param = (param * path_cost_exp[t_idx]) / normalizing
 
                 if scaled_param.isnan().any():
-                     print("here we go")
+                    print("here we go")
 
                 # Update optimizer with scaled gradients
                 policy_optimizers.param_groups[0]['params'][param_idx].grad += scaled_param
 
-
         # Take gradient step
         policy_optimizers.step()
 
-        logger.log(paths[:, :, :].detach(), costs_q, costs_noise, costs_action, path_cost, path_cost_phi, path_cost_final, path_cost_exp, policy, r)
-
+        logger.log(paths[:, :, :].detach(), costs_q, costs_noise, costs_action, path_cost, path_cost_phi,
+                   path_cost_final, path_cost_exp, policy, r)
 
         env.reset()
-
-

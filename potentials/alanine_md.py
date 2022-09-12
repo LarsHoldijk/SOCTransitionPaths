@@ -1,19 +1,16 @@
-
-from openmm import app
 import openmm as mm
 import openmm.unit as unit
+from openmm import app
 from openmmtools.integrators import VVVRIntegrator
-import numpy as np 
-from tqdm import tqdm
 
 from potentials.MoleculePotential import MoleculePotential
 
+
 class AlaninePotentialMD(MoleculePotential):
-    def __init__(self, start_file, index, reset_steps=100, save_file=None, temp_mul = 1):
-        super().__init__(start_file, index, reset_steps, save_file, temp_mul)
+    def __init__(self, start_file, index, save_file=None):
+        super().__init__(start_file, index, save_file)
 
     def setup(self):
-        # print(self.temp_mul)
         forcefield = app.ForceField('amber99sbildn.xml', 'tip3p.xml')
         pdb = app.PDBFile(self.start_file)
         system = forcefield.createSystem(
@@ -35,7 +32,7 @@ class AlaninePotentialMD(MoleculePotential):
             external_force.addParticle(i, [0, 0, 0])
 
         integrator = VVVRIntegrator(
-            300 * unit.kelvin * self.temp_mul,  # temp
+            300 * unit.kelvin,  # temp
             1.0 / unit.picoseconds,  # collision rate
             1.0 * unit.femtoseconds)  # timestep
 
@@ -46,12 +43,8 @@ class AlaninePotentialMD(MoleculePotential):
         properties = {'DeviceIndex': '0', 'Precision': 'mixed'}
 
         simulation = app.Simulation(pdb.topology, system, integrator,
-                                         platform, properties)
+                                    platform, properties)
         simulation.context.setPositions(pdb.positions)
-
-        # not sure if you have to report every step, but if you don't, it might be better to increase it
-        # (for example to 10, because that is how many steps you take in the method potential)
-        # it is going to be slower when it has to report every step, but
 
         return pdb, simulation, external_force
 

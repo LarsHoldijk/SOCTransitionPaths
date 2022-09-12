@@ -1,6 +1,3 @@
-import os
-
-import numpy as np
 import torch
 
 from Dynamics.MoleculeBase import MoleculeBaseDynamics

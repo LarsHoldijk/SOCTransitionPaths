@@ -1,11 +1,8 @@
-import os
 from abc import abstractmethod, ABC
 
 import numpy as np
 import torch
 from einops import einops
-
-from potentials.alanine_md import AlaninePotentialMD
 
 
 class MoleculeBaseDynamics(ABC):
@@ -38,6 +35,20 @@ class MoleculeBaseDynamics(ABC):
         pass
 
     def f(self, x, t):
+        """
+        This is the function called from within the PICE algorithm that performs the MD simulation step. It is
+        important to understand that the input velocity component of the input x does not actually represent the
+        current velocity of the system, but rather the control force. This is added to the OpenMM internal
+        representation of the velocity using the Custom External Force implemented in the potential class.
+
+        Related, the velocity component of the return value is also not the actual update to the systems velocity but
+        is instead used to reset the velocity to zero such that only the control is passed in the next call to
+        this function.
+
+        :param x: Current coordinates of the atoms and control force
+        :param t: Unused time parameter
+        :return: change to the coordinates and negation of the control.
+        """
         pos = x[:, :int(x.shape[1] / 2)].view(self.n_samples, -1, 3)
         vel = x[:, int(x.shape[1] / 2):].view(self.n_samples, -1, 3)
         vel_np = vel.detach().cpu().numpy()
@@ -57,17 +68,26 @@ class MoleculeBaseDynamics(ABC):
         return comb
 
     def G(self, x):
+        """
+        Returns the control matrix of the dynamics
+        :param x:
+        :return:
+        """
         return self.G_matrix
 
 
     def q(self, x):
+        """
+        Intermediate cost. Ignored in our implementation.
+        :param x:
+        :return:
+        """
         return 0.
 
     def starting_positions(self, n_samples):
         initial_positions = []
         for i in range(self.n_samples):
-            initial_positions.append(
-                torch.tensor(self.potentials[i].reporter.latest_positions))
+            initial_positions.append(torch.tensor(self.potentials[i].reporter.latest_positions))
         initial_positions = torch.stack(initial_positions).to(self.device)
         initial_positions = initial_positions.view(n_samples, -1)
 
